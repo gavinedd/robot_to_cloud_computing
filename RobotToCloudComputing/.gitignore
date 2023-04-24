@@ -1,0 +1,11 @@
+# SQLite dumps
+*.sqlite3
+
+# Python cache files
+__pycache__
+
+# Logs directory
+logs/
+
+# Emacs autosave files
+.#*

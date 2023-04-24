@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>HTML 5 Boilerplate</title>
+    <style>
+      #map{
+        width: 100%;
+        height: 400px;
+      }
+    </style>
+
+  </head>
+
+  <body>
+    <div id="map"></div>
+    <script>
+      function initMap() {
+        var options = {
+          zoom: 15,
+          center: {lat: 41.7452, lng: -111.8097}
+        }
+
+        var map = new google.maps.Map(document.getElementById('map'), options);
+        
+       function addMarker(props){
+          var marker = new google.maps.Marker({
+            position: props.coords,
+            map: map,
+            content: props.content,
+
+          });
+
+          if(props.content){
+            var infoWindow = new google.maps.InfoWindow({
+              content: props.content
+            });
+
+            marker.addListener('click', function(){
+              infoWindow.open(map, marker);
+            });
+          }
+        }
+
+       
+       fetch('http://' + window.location.host + '/data')
+      .then(response => response.json())
+      .then(datas => {
+        
+        for(i=0; i < datas.length; i++){
+            for(j=0; j < datas[i].data.length; j++){
+              console.log(datas[i].data[j]);
+              addMarker({coords:{lat: datas[i].data[j].latitude, lng: datas[i].data[j].longitude}, content: `${datas[i].data[j].latitude}, ${datas[i].data[j].longitude}`});
+            }
+
+        }
+    })
+      }
+      
+    </script>
+
+    <script
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAyPWUEgGmM38UouoYeCGfmbICsZfnoUCk
+      &callback=initMap&v=weekly"
+      async
+    >
+  </script>
+  </body>
+
+</html>

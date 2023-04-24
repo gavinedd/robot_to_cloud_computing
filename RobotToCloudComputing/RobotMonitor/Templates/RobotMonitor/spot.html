@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/ico" href="/static/RobotMonitor/favicon.ico" />
+    <link rel="stylesheet" href="/static/RobotMonitor/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spot</title>
+  </head>
+  <body>
+    <div class="topnav">
+      <a href="index">Home</a>
+    </div>
+
+    <div class="pageHeader">
+      <h1>Spot</h1>
+    </div>
+
+    <div class="row">
+      <div class="column">
+	<div class = "card" style="text-align: right">
+	  <h2 class = "header">Image Feed</h2>
+
+	  <div id = "imgContainer" class = "rotatedImgContainer">
+	    <img src="" id="leftImage" class = "rotatedImg">
+	    <img src="" id="rightImage" class = "rotatedImg">
+	  </div>
+
+	  <div style="text-align:center">
+	    <input type="radio" id="rgb" name="pictureType" value="rgb" checked>
+	    <label for="rgb">RGB Image</label>
+	    
+	    <input type="radio" id="infrared" name="pictureType" value="infrared">
+	    <label for="infrared">Infrared Image</label>
+	    
+	    <input type="radio" id="depth" name="pictureType" value="depth">
+	    <label for="depth">Depth Image</label>
+	  </div>
+
+	  <input type="file" id="fileSelect" style="padding-top: 20px" accept="image/jpeg, image/png" multiple>
+	</div>
+	<script src="/static/RobotMonitor/main.js" type="text/javascript"></script>
+	
+	
+        <div class="test" id="dataBox">
+          <h2>Available Data:</h2>
+          <script>
+            var container = document.getElementById('dataBox');
+
+            fetch('http://' + window.location.host + '/RobotMonitor/data/get_available_data_time_ranges?robot_id=bf3b4862-d905-4f57-b9ae-2297685d2b8c')
+    .then(response => response.json())
+    .then(datas => {
+        for(let i = datas.length - 1; i >= 0; --i){
+            let startTime = new Date(parseFloat(datas[i].start_time) * 1000);
+            let formattedStartTime = `${startTime.getMonth() + 1}/${startTime.getDay()}/${startTime.getYear() + 1900} ` +
+                `${startTime.getHours()}:${startTime.getHours()}:${startTime.getMinutes()}:${startTime.getSeconds()}.` +
+                `${startTime.getMilliseconds()}`;
+            let endTime = new Date(parseFloat(datas[i].end_time) * 1000);
+            let formattedEndTime = `${endTime.getMonth() + 1}/${endTime.getDay()}/${endTime.getYear() + 1900} ` +
+                `${endTime.getHours()}:${endTime.getHours()}:${endTime.getMinutes()}:${endTime.getSeconds()}.` +
+                `${endTime.getMilliseconds()}`;
+
+            let element = document.createElement('a');
+            element.innerHTML = `${formattedStartTime} - ${formattedEndTime}`;
+            
+            element.addEventListener('click', function () {
+                window.location.href = "http://" + window.location.host + "/RobotMonitor/diagraph?robot_id=bf3b4862-d905-4f57-b9ae-2297685d2b8c&start_time=" + datas[i].start_time + "&end_time=" + datas[i].end_time;
+            });
+
+            let para = document.createElement('p');
+            para.appendChild(element);
+            container.append(para);
+        }
+    });
+          </script>
+        </div>
+      </div>
+
+      <div class="small-column">
+        <div class="card">
+          <h2 class="header"> Battery Information</h2>
+          <table class="center">
+            <tr>
+              <th>Attribute</th>
+              <th>Description</th>
+            </tr>
+            <tr>
+              <td> Battery Capacity </td>
+              <td> 605 Wh </td> 
+            </tr>
+            <tr>
+              <td> Max battery voltage </td>
+              <td> 58.8 V </td> 
+            </tr>
+            <tr>
+              <td> Typical Runtime </td>
+              <td> 90 minutes </td>
+            </tr>
+            <tr>
+              <td> Standby time </td>
+              <td> 180 minutes </td>
+            </tr>
+            <tr>
+              <td> Charger power </td>
+              <td> 400 W </td>
+            </tr>
+            <tr>
+              <td> Max charge current </td>
+              <td> 7 A </td>
+            </tr>
+            <tr>
+              <td> Time to charge  </td>
+              <td> Approximately 2 hours </td>
+            </tr>
+            <tr>
+              <td> Charger power </td>
+              <td> 400 W </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div class="small-column">
+        <div class="card">
+          <h2 class="header"> General Data </h2>
+          <table class="center">
+            <tr>
+              <th>Attribute</th>
+              <th>Description</th>
+            </tr>
+            <tr>
+              <td> Time </td>
+              <td> Indicator of when the particular set of data came in </td> 
+            </tr>
+            <tr>
+              <td> Current: </td>
+              <td> Rate of the charge flowing at the given time</td> 
+            </tr>
+            <tr>
+              <td> Voltage </td>
+              <td> Difference of charge at the given time </td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="card">
+          <h2 class="header"> Joint Data </h2>
+          <h3> Prefix Guide </h3>
+          <table class="center">
+            <tr> 
+              <td> fl </td>
+              <td> front left leg </td>
+            </tr>
+            <tr> 
+              <td> fr </td>
+              <td> front right leg </td>
+            </tr>
+            <tr> 
+              <td> hl </td>
+              <td> hind left leg </td>
+            </tr>
+            <tr> 
+              <td> hr </td>
+              <td> hind right leg </td>
+            </tr>
+            <tr> 
+              <td> kn </td>
+              <td> knee </td>
+            </tr>
+            <tr> 
+              <td> hx </td>
+              <td> hip X position </td>
+            </tr>
+            <tr> 
+              <td> hy </td>
+              <td> hip Y position </td>
+            </tr>
+          </table>
+
+          <h3> Data Types </h3> 
+          <table class="center">
+            <tr>
+              <td> Velocity </td>
+              <td> Rate of displacement over time </td> 
+            </tr> 
+            <tr> 
+              <td> Acceleration </td>
+              <td> Rate of velocity changing in the joint over time. </td> 
+            </tr>
+            <tr>
+              <td> Load </td>
+              <td> Amount of electricity being consumed by the joint </td>
+            </tr> 
+          </table> 
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+

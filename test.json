@@ -1,0 +1,8 @@
+
+  {
+      "time": "TIME DATA",
+      "current": "CURRENT DATA",
+      "voltage": "VOLTAGE DATA",
+      "flhx": "FRONT LEG DATA 2",
+      "flhxVel": "VELOCITY DATA"
+  }

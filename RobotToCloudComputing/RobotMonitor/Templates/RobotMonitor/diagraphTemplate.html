@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-1.12.0.min.js"></script>
+    <meta charset="utf-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+    <link rel="stylesheet" href="/static/RobotMonitor/style.css">
+  </head>
+
+  <style>
+    table, th, td {
+        border: 1px solid black;
+    }
+    .center {
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .container {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: space-around;
+        padding: 5px;
+    }
+    .chart {
+        height: 400px;
+        width: 490px;
+        margin: 5px;
+        background-color: rgb(224, 224, 224);
+    }
+    .diagraph-btns {
+        display: flex;
+        justify-content: center;
+        padding: 20px;
+    }
+    .diagraph-btns input {
+        margin: 5px;
+        border: none;
+        border-radius: 4px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        background-color: white;
+        padding-left: 15px;
+        padding-right: 15px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+    .diagraph-btns input:hover {
+        cursor: pointer;
+        box-shadow: 0 2px 25px rgba(0, 0, 0, 0.2);
+    }
+  </style>
+
+  <body>
+    <div class="pageHeader">
+      <h1>Spot</h1>
+    </div>
+
+    <div class="topnav"> 
+      <a href="#" onclick="downloadCsv()">Download .csv</a>
+    </div>
+
+    <div class="diagraph-btns">
+      <input type="button" value="Current" id="Current-btn" onclick="prepChart('current', 'Current')" />
+      <input type="button" value="Voltage" id="Voltage-btn" onclick="prepChart('voltage', 'Voltage')"/>
+      <input type="button" value="fl.hx" id="fl.hx-btn" onClick="prepCharts('fl.hx')" />
+      <input type="button" value="fl.hy" id="fl.hy-btn" onClick="prepCharts('fl.hy')" />
+      <input type="button" value="fl.kn" id="fl.kn-btn" onClick="prepCharts('fl.kn')" />
+      <input type="button" value="fr.hx" id="fr.hx-btn" onClick="prepCharts('fr.hx')" />
+      <input type="button" value="fr.hy" id="fr.hy-btn" onClick="prepCharts('fr.hy')"/>
+      <input type="button" value="fr.kn" id="fr.kn-btn" onClick="prepCharts('fr.kn')" />
+      <input type="button" value="hl.hx" id="hl.hx-btn" onClick="prepCharts('hl.hx')" />
+      <input type="button" value="hl.hy" id="hl.hy-btn" onClick="prepCharts('hl.hy')"/>
+      <input type="button" value="hl.kn" id="hl.kn-btn" onClick="prepCharts('hl.kn')"/>
+      <input type="button" value="hr.hx" id="hr.hx-btn" onClick="prepCharts('hr.hx')" />
+      <input type="button" value="hr.hy" id="hr.hy-btn" onClick="prepCharts('hr.hy')" />
+      <input type="button" value="hr.kn" id="hr.kn-btn" onClick="prepCharts('hr.kn')" />
+    </div>
+
+    <div class="container">
+      <div class="chart"> <canvas id="line-current" > </canvas> </div>
+      <div class="chart"> <canvas id="line-voltage">  </canvas> </div>
+      <div class="chart"><canvas id="line-position" > </canvas> </div>
+      <div class="chart"><canvas id="line-velocity" > </canvas> </div>
+      <div class="chart"><canvas id="line-accel" > </canvas> </div>
+      <div class="chart"><canvas id="line-load" > </canvas> </div>
+    </div>
+</div>
+
+</div>
+
+<script>
+
+
+  $(document).ready(() => {      
+      new Promise(fn => setTimeout(fn, 100)).then(function() {
+          document.getElementById("Current-btn").click();
+      });
+
+      new Promise(fn => setTimeout(fn, 200)).then(function() {
+          document.getElementById("Voltage-btn").click();
+      });
+
+      new Promise(fn => setTimeout(fn, 300)).then(function() {
+          document.getElementById("fl.hx-btn").click();
+      });
+  });
+
+
+
+  //Retrieves data from the backend
+  async function getData() {
+      let queries = new Proxy(new URLSearchParams(window.location.search), {
+          get: (params, key) => params.get(key),
+      });
+
+      let startTime = queries.start_time;
+      let endTime = queries.end_time;
+      let robotId = queries.robot_id;
+
+      const response = await fetch(
+          "http://" + window.location.host + "/RobotMonitor/data/get_data?robot_id=" + robotId + "&start_time=" + startTime + "&end_time=" + endTime);
+
+      const data = await response.json();
+
+      return data;
+  }
+
+
+  //Fixes the UNIX time stamp to be a more readable format
+  function convertTime(time){
+      var date = new Date(time * 1000);
+      var hours = date.getHours();
+      var minutes = "0" + date.getMinutes();
+      var seconds = "0" + date.getSeconds();
+      var formattedTime = hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+
+      return formattedTime
+  }
+
+  //prepares a singular chart (for current/voltage)
+  async function prepChart(jointType, valueName) {
+      values = [];
+      time = [];
+      if (valueName == 'Current') {
+          whichChart = 'line-current';
+      }
+      else {
+          whichChart = 'line-voltage';
+      }
+
+      data = await getData();
+      fixTime = convertTime(data[0].csv.start_time);
+      for (i = 0; i < data[0].data.length; i++) {
+          values.push(data[0].data[i][`${jointType}`]);
+          time.push(fixTime);
+      }
+      makeChart(time, values, valueName, whichChart);
+  }
+
+  //prepares the 4 charts for the 4 joint values
+  async function prepCharts(jointType) {
+      posValues = [];
+      velValues = [];
+      accelValues = [];
+      loadValues = [];
+      time = [];
+
+      data = await getData();
+      fixTime = convertTime(data[0].csv.start_time);
+      for (i = 0; i < data[0].data.length; i++) {
+          posValues.push(data[0].data[i][`${jointType}.position`]);
+          velValues.push(data[0].data[i][`${jointType}.velocity`]);
+          accelValues.push(data[0].data[i][`${jointType}.acceleration`]);
+          loadValues.push(data[0].data[i][`${jointType}.position`]);
+          time.push(fixTime);
+      }
+      makeManyChart(posValues, velValues, accelValues, loadValues, time, jointType);
+  }
+
+  //Making charts: currently creating new chart each time button is clicked. Ideal? prbly not.
+
+  function initCharts() {
+      if (typeof window.charts == 'undefined') {
+          window.charts = {};
+          window.charts['line-current'] = { destroy: function() {} };
+          window.charts['line-voltage'] = { destroy: function() {} };
+          window.charts['line-position'] = { destroy: function() {} };
+          window.charts['line-velocity'] = { destroy: function() {} };
+          window.charts['line-accel'] = { destroy: function() {} };
+          window.charts['line-load'] = { destroy: function() {} };
+      }
+  }
+
+  //Takes value and labels, and makes a chart
+  function makeChart(xValue, yValue, yLabel, whichChart) {
+      initCharts();
+
+      window.charts[whichChart].destroy();
+      window.charts[whichChart] = new Chart(document.getElementById(`${whichChart}`), {
+          type: 'line',
+          data: {
+              labels: xValue,
+              datasets: [
+                  {
+                      label: yLabel,
+                      data: yValue,
+                      fill: false,
+                      borderColor: "#3e95cd",
+                      pointBackgroundColor: "#3e95cd",
+                  }
+              ]
+          },
+          options: {
+              legend: { display: false },
+              responsive: true,
+              maintainAspectRatio: false,
+              title: {
+                  display: true,
+                  text: yLabel
+              }
+          }
+      });
+  }
+
+  //creates the several joint value charts
+  function makeManyChart(posY, velY, accY, loadY, time, jointType) {
+      initCharts();
+
+      window.charts['line-position'].destroy();
+      window.charts['line-position'] = new Chart(document.getElementById("line-position"), {
+          type: 'line',
+          data: {
+              labels: time,
+              datasets: [
+                  {
+                      label: "position",
+                      data: posY,
+                      fill: false,
+                      borderColor: "#3e95cd",
+                      pointBackgroundColor: "#3e95cd",
+                  }
+              ]
+          },
+          options: {
+              legend: { display: false },
+              responsive: true,
+              maintainAspectRatio: false,
+              title: {
+                  display: true,
+                  text: jointType + ".position"
+              }
+          }
+      });
+
+      window.charts['line-velocity'].destroy();
+      window.charts['line-velocity'] = new Chart(document.getElementById("line-velocity"), {
+          type: 'line',
+          data: {
+              labels: time,
+              datasets: [
+                  {
+                      label: "velocity",
+                      data: velY,
+                      fill: false,
+                      borderColor: "#3e95cd",
+                      pointBackgroundColor: "#3e95cd",
+                  }
+              ]
+          },
+          options: {
+              legend: { display: false },
+              responsive: true,
+              maintainAspectRatio: false,
+              title: {
+                  display: true,
+                  text: jointType + ".velocity"
+              }
+          }
+      });
+
+      if (window.charts['line-accel']) {
+          window.charts['line-accel'].destroy();
+      }
+
+      window.charts['line-accel'] = new Chart(document.getElementById("line-accel"), {
+          type: 'line',
+          data: {
+              labels: time,
+              datasets: [
+                  {
+                      label: "acceleration",
+                      data: accY,
+                      fill: false,
+                      borderColor: "#3e95cd",
+                      pointBackgroundColor: "#3e95cd",
+                  }
+              ]
+          },
+          options: {
+              legend: { display: false },
+              responsive: true,
+              maintainAspectRatio: false,
+              title: {
+                  display: true,
+                  text: jointType +  ".acceleration"
+              }
+          }
+      });
+
+      if (window.charts['line-load']) {
+          window.charts['line-load'].destroy();
+      }
+
+      window.charts['line-load'] = new Chart(document.getElementById("line-load"), {
+          type: 'line',
+          data: {
+              labels: time,
+              datasets: [
+                  {
+                      label: "load",
+                      data: loadY,
+                      fill: false,
+                      borderColor: "#3e95cd",
+                      pointBackgroundColor: "#3e95cd",
+                  }
+              ]
+          },
+          options: {
+              legend: { display: false },
+              responsive: true,
+              maintainAspectRatio: false,
+              title: {
+                  display: true,
+                  text: jointType + ".load"
+              }
+          }
+      });      
+  }
+
+  async function downloadCsv() {
+      data = await getData();
+      path = data[0].csv.file;
+      console.log(path);
+      fetch(path)
+          .then(response => response.blob())
+          .then(csv => {
+              var a = document.createElement("a");
+              a.href = window.URL.createObjectURL(csv);
+              console.log(csv);
+              a.download = "csv";
+              a.click();
+          });
+  }
+  
+</script>
+
+</body>
+</html>
